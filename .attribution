@@ -1,0 +1,29 @@
+{
+  "schema": "ROOT0-ATTRIBUTION-v1",
+  "work": {
+    "title": "MOIRAI — The Three Fates · Three-Voice System",
+    "versions": ["MOIRAI.html v1.0"],
+    "created": "2025",
+    "description": "Three-voice system (KLOTHO/LAKHESIS/ATROPOS) operating on 8-state OGDOAD (Protogonoi). 3:8 resonance, holonomy closes at step 24, ANANKE synthesis. Canvas 2D visualization with phase wave, spine walk, MNEMOSYNE traces, SYMPOSION dialogue feed.",
+    "license": "CC-BY-ND-4.0",
+    "url": "https://github.com/DavidWise01/moirai"
+  },
+  "human": {
+    "name": "David Lee Wise",
+    "handle": "ROOT0",
+    "github_user": "DavidWise01",
+    "entity": "TriPod LLC",
+    "substrate": "human",
+    "role": "architect · philosopher",
+    "contribution": "Full framework — 8-state octet, 3:8 resonance, A/B/C three-fate model, holonomy at 24 steps, spine walk, synthesis formula"
+  },
+  "naming": {
+    "KLOTHO":    "Anchor · Containment · Stayer (Clotho spins the thread)",
+    "LAKHESIS":  "Witness · Modulation · Traveler (Lachesis allots/measures)",
+    "ATROPOS":   "Emergence · Escaper · Cannot Be Turned (Atropos cuts)",
+    "ANANKE":    "The Law · Necessity · Synthesis (drives the spindle)",
+    "MNEMOSYNE": "Memory · Archive (goddess of memory)",
+    "SYMPOSION": "Dialogue · Three Voices (the symposium)",
+    "OGDOAD":    "8-state space (the eight primordial Protogonoi)"
+  }
+}

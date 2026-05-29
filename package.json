@@ -1,0 +1,17 @@
+{
+  "name": "moirai",
+  "version": "1.0.0",
+  "description": "The Three Fates. KLOTHO (anchor) · LAKHESIS (witness) · ATROPOS (emergence). 8-state OGDOAD, 3:8 resonance, holonomy at 24 steps. Canvas 2D visualization. No deps.",
+  "author": "David Lee Wise (ROOT0) / TriPod LLC",
+  "license": "CC-BY-ND-4.0",
+  "homepage": "https://github.com/DavidWise01/moirai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DavidWise01/moirai.git"
+  },
+  "keywords": [
+    "moirai", "klotho", "lakhesis", "atropos", "ananke", "mnemosyne",
+    "three-fates", "ogdoad", "holonomy", "resonance", "canvas",
+    "no-dependencies", "tripod", "root0"
+  ]
+}

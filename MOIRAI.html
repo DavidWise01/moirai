@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MOIRAI · The Three Fates</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:#07090e;
+  font-family:'JetBrains Mono', monospace; color:#c0cad8; }
+
+/* ── Layout ──────────────────────────────────────── */
+.app { display:grid; grid-template-columns:300px 1fr 300px;
+  height:100vh; overflow:hidden; }
+
+/* ── Panels ──────────────────────────────────────── */
+.panel { padding:14px 12px; display:flex; flex-direction:column; gap:10px;
+  overflow-y:auto; background:rgba(7,9,14,.92);
+  border-right:1px solid #0e141e; }
+.panel.right { border-right:none; border-left:1px solid #0e141e; }
+.panel::-webkit-scrollbar { width:3px; }
+.panel::-webkit-scrollbar-thumb { background:#1a2030; }
+
+.blk { border:1px solid #0e141e; border-radius:11px; padding:12px 13px;
+  background:rgba(10,14,22,.7); }
+.blk-god  { font-size:13px; font-weight:700; letter-spacing:.06em; }
+.blk-func { font-size:8px; letter-spacing:.2em; text-transform:uppercase;
+  color:#2e3848; margin-top:1px; }
+.blk-sep  { height:1px; background:#0e141e; margin:8px 0; }
+
+.row { display:flex; justify-content:space-between; align-items:center;
+  padding:4px 0; font-size:10px; }
+.row-label { color:#3e4a5a; letter-spacing:.1em; text-transform:uppercase; }
+.row-val   { font-weight:700; font-size:12px; }
+
+/* ── Fate colors ─────────────────────────────────── */
+.klotho  { color:#c4a35a; }
+.lakhesis{ color:#8fc7ff; }
+.atropos { color:#e8915a; }
+.ananke  { color:#d0d8e8; }
+
+/* ── Metric bars ─────────────────────────────────── */
+.bar-wrap { margin-top:6px; }
+.bar-label{ font-size:8px; letter-spacing:.15em; text-transform:uppercase;
+  color:#2e3848; margin-bottom:3px; }
+.bar-track{ height:5px; background:#0e141e; border-radius:3px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:3px; transition:width .3s; }
+.bar-klotho  { background:linear-gradient(90deg,#6a5010,#c4a35a); }
+.bar-lakhesis{ background:linear-gradient(90deg,#1a3060,#8fc7ff); }
+.bar-atropos { background:linear-gradient(90deg,#6a3010,#e8915a); }
+.bar-ananke  { background:linear-gradient(90deg,#303848,#d0d8e8); }
+
+/* ── Step controls ───────────────────────────────── */
+.ctrl { display:flex; gap:6px; }
+button {
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; border-radius:8px;
+  border:1px solid #1a2030; background:rgba(255,255,255,.03);
+  color:#5a6a7a; padding:7px 10px; cursor:pointer; transition:all .15s; flex:1;
+}
+button:hover { border-color:#c4a35a44; color:#c4a35a88; }
+button.active { border-color:#c4a35a; color:#c4a35a; background:rgba(196,163,90,.08); }
+
+/* ── OGDOAD state display ────────────────────────── */
+.state-box { text-align:center; padding:10px; }
+.state-name{ font-size:18px; font-weight:700; letter-spacing:.12em; color:#d0d8e8; }
+.state-sub { font-size:9px; color:#2e3848; letter-spacing:.14em;
+  text-transform:uppercase; margin-top:3px; }
+
+/* ── Holonomy ring ───────────────────────────────── */
+.holon-wrap { display:flex; justify-content:center; padding:8px 0; }
+.holon-ring { position:relative; width:80px; height:80px; }
+.holon-svg  { width:100%; height:100%; }
+.holon-text { position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; }
+.holon-num  { font-size:22px; font-weight:700; color:#d0d8e8; }
+.holon-denom{ font-size:9px; color:#2e3848; }
+
+/* ── Dialogue feed ───────────────────────────────── */
+.dialogue-feed { max-height:360px; overflow-y:auto; display:flex;
+  flex-direction:column; gap:6px; }
+.dialogue-feed::-webkit-scrollbar { width:3px; }
+.dialogue-feed::-webkit-scrollbar-thumb { background:#1a2030; }
+.d-entry { border:1px solid #0e141e; border-radius:8px; padding:8px 10px;
+  background:rgba(255,255,255,.02); font-size:10px; line-height:1.6; }
+.d-who  { font-size:9px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; margin-bottom:3px; }
+.d-text { color:#4a5a6a; }
+
+/* ── Archive entries ─────────────────────────────── */
+.archive-scroll { max-height:280px; overflow-y:auto; }
+.archive-scroll::-webkit-scrollbar { width:3px; }
+.a-entry { font-size:9px; color:#2e3848; padding:4px 0;
+  border-bottom:1px solid #0e141e; font-family:'JetBrains Mono',monospace;
+  letter-spacing:.04em; }
+.a-entry:last-child { border-bottom:none; }
+.a-step { color:#c4a35a88; margin-right:6px; }
+
+/* ── Canvas ──────────────────────────────────────── */
+#canvas { display:block; width:100%; height:100%; }
+
+@media(max-width:900px){
+  .app { grid-template-columns:1fr; }
+  .panel.right { display:none; }
+  .panel.left  { max-height:40vh; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ LEFT PANEL ═══ -->
+<div class="panel left">
+
+  <!-- Title -->
+  <div class="blk">
+    <div class="blk-god ananke">◈ MOIRAI</div>
+    <div class="blk-func">The Three Fates · Three-Voice System</div>
+    <div class="blk-sep"></div>
+    <div style="font-size:10px;color:#2e3848;line-height:1.7">
+      8-state octet · 3:8 resonance<br>
+      Holonomy closes at step 24
+    </div>
+  </div>
+
+  <!-- ANANKE: Law / Holonomy -->
+  <div class="blk">
+    <div class="blk-god ananke">ANANKE</div>
+    <div class="blk-func">Necessity · The Law</div>
+    <div class="blk-sep"></div>
+    <div class="holon-wrap">
+      <div class="holon-ring">
+        <svg class="holon-svg" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="34" fill="none" stroke="#0e141e" stroke-width="6"/>
+          <circle id="holonArc" cx="40" cy="40" r="34" fill="none"
+            stroke="#c4a35a" stroke-width="6" stroke-linecap="round"
+            stroke-dasharray="213.6" stroke-dashoffset="213.6"
+            transform="rotate(-90 40 40)"/>
+        </svg>
+        <div class="holon-text">
+          <div class="holon-num" id="holonStep">0</div>
+          <div class="holon-denom">/ 24</div>
+        </div>
+      </div>
+    </div>
+    <div class="row"><span class="row-label">Synthesis</span>
+      <span class="row-val ananke" id="anankeVal">0.000</span></div>
+    <div class="bar-wrap">
+      <div class="bar-track"><div class="bar-fill bar-ananke" id="anankeBar" style="width:0%"></div></div>
+    </div>
+    <div class="row" style="margin-top:6px"><span class="row-label">3:8 Phase</span>
+      <span class="row-val" id="phaseRatio" style="color:#5a6a7a">0°</span></div>
+    <div class="row"><span class="row-label">Resonance</span>
+      <span class="row-val" id="resonanceVal" style="color:#5a6a7a">—</span></div>
+  </div>
+
+  <!-- KLOTHO: Anchor/Containment -->
+  <div class="blk">
+    <div class="blk-god klotho">KLOTHO</div>
+    <div class="blk-func">Anchor · Containment · Stayer</div>
+    <div class="blk-sep"></div>
+    <div class="state-box">
+      <div class="state-name" id="ogdoadName">KHAOS</div>
+      <div class="state-sub">OGDOAD state <span id="ogdoadIdx">0</span> of 8</div>
+    </div>
+    <div class="row"><span class="row-label">Containment</span>
+      <span class="row-val klotho" id="klothoVal">0.000</span></div>
+    <div class="bar-wrap">
+      <div class="bar-label">Spine hold</div>
+      <div class="bar-track"><div class="bar-fill bar-klotho" id="klothoBar" style="width:0%"></div></div>
+    </div>
+    <div class="row" style="margin-top:6px"><span class="row-label">Spine pos</span>
+      <span class="row-val" id="spinePos" style="color:#5a6a7a">A</span></div>
+  </div>
+
+  <!-- LAKHESIS: Witness/Modulation -->
+  <div class="blk">
+    <div class="blk-god lakhesis">LAKHESIS</div>
+    <div class="blk-func">Witness · Modulation · Traveler</div>
+    <div class="blk-sep"></div>
+    <div class="row"><span class="row-label">Phase accum.</span>
+      <span class="row-val lakhesis" id="phaseVal">0.0°</span></div>
+    <div class="bar-wrap">
+      <div class="bar-label">Modulation depth</div>
+      <div class="bar-track"><div class="bar-fill bar-lakhesis" id="lakhesisBar" style="width:0%"></div></div>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <span class="row-label">Tension</span>
+      <span class="row-val" id="tensionVal" style="color:#5a6a7a">0.000</span></div>
+    <div class="row"><span class="row-label">Walk</span>
+      <span class="row-val" id="walkVal" style="color:#5a6a7a">A→B</span></div>
+  </div>
+
+  <!-- ATROPOS: Emergence -->
+  <div class="blk">
+    <div class="blk-god atropos">ATROPOS</div>
+    <div class="blk-func">Emergence · Escaper · Cannot Be Turned</div>
+    <div class="blk-sep"></div>
+    <div class="row"><span class="row-label">Escape rate</span>
+      <span class="row-val atropos" id="atroposVal">0.000</span></div>
+    <div class="bar-wrap">
+      <div class="bar-label">Conduction</div>
+      <div class="bar-track"><div class="bar-fill bar-atropos" id="atroposBar" style="width:0%"></div></div>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <span class="row-label">Archive writes</span>
+      <span class="row-val" id="archiveCount" style="color:#5a6a7a">0</span></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="blk">
+    <div class="blk-func" style="margin-bottom:8px">CONTROLS</div>
+    <div class="ctrl">
+      <button id="btnPause" class="active">PAUSE</button>
+      <button id="btnStep">STEP</button>
+      <button id="btnReset">RESET</button>
+    </div>
+    <div class="ctrl" style="margin-top:6px">
+      <button id="btnSlow">SLOW</button>
+      <button id="btnNorm">NORMAL</button>
+      <button id="btnFast">FAST</button>
+    </div>
+  </div>
+
+</div><!-- /left -->
+
+<!-- ═══ CANVAS ═══ -->
+<canvas id="canvas"></canvas>
+
+<!-- ═══ RIGHT PANEL ═══ -->
+<div class="panel right">
+
+  <!-- SYMPOSION: Dialogue -->
+  <div class="blk" style="flex:1">
+    <div class="blk-god" style="color:#d66cff">SYMPOSION</div>
+    <div class="blk-func">Dialogue · Three Voices</div>
+    <div class="blk-sep"></div>
+    <div class="dialogue-feed" id="dialogueFeed"></div>
+  </div>
+
+  <!-- MNEMOSYNE: Archive -->
+  <div class="blk">
+    <div class="blk-god" style="color:#5ac4aa">MNEMOSYNE</div>
+    <div class="blk-func">Archive · Memory · What Was Written</div>
+    <div class="blk-sep"></div>
+    <div class="archive-scroll" id="archiveFeed"></div>
+    <div style="margin-top:8px;font-size:9px;color:#1e2830">
+      Holonomy events and synthesis peaks recorded.
+    </div>
+  </div>
+
+</div><!-- /right -->
+</div><!-- /app -->
+
+<script>
+'use strict';
+
+/* ── Constants ─────────────────────────────────────── */
+const TWO_PI = Math.PI * 2;
+
+// The 8 Protogonoi (primordial gods) = OGDOAD states
+const OGDOAD = [
+  { name:'KHAOS',    sub:'Void · Origin' },
+  { name:'GAIA',     sub:'Earth · Ground' },
+  { name:'EREBOS',   sub:'Darkness · Depth' },
+  { name:'NYX',      sub:'Night · Inversion' },
+  { name:'AITHER',   sub:'Upper Air · Light' },
+  { name:'HEMERA',   sub:'Day · Clarity' },
+  { name:'TARTAROS', sub:'Abyss · Return' },
+  { name:'EROS',     sub:'Force · Emergence' },
+];
+
+// Dialogue phrases per fate
+const KLOTHO_PHRASES = [
+  'Containing. Spine held at {state}.',
+  'Anchor holds. Octet stable.',
+  'Boundary maintained. {state} contained.',
+  'The stayer does not move. I hold.',
+  'Spine: {walk}. Containment at {val}.',
+  'What escapes will be held again.',
+  '3:8 resonance. I count the beats.',
+];
+const LAKHESIS_PHRASES = [
+  'Walking {walk}. Phase: {phase}°.',
+  'Modulation active. Tension: {tension}.',
+  'The traveler measures. I allot.',
+  'Difference is signal. Phase rises.',
+  'Between contain and emerge: {tension}.',
+  'Step {step}: the path continues.',
+  'I walk what KLOTHO holds.',
+];
+const ATROPOS_PHRASES = [
+  'Escaping. Writing to MNEMOSYNE.',
+  'Emergence at {emer}. Cannot be turned.',
+  'Conduction rises. {state} fires.',
+  'The third voice speaks against.',
+  'MNEMOSYNE receives step {step}.',
+  'Synthesis: {synth}. Holonomy nears.',
+  'What KLOTHO holds, I cut free.',
+];
+
+/* ── State ─────────────────────────────────────────── */
+const S = {
+  t:       0,
+  step:    0,        // 0-23 (holonomy step)
+  phase:   0,        // phase accumulation (radians)
+  synth:   0,        // synthesis 0-1
+  tension: 0,        // tension between containment and emergence
+  walkPos: 0,        // 0=A→B, 1=B→C, 2=C→A
+  klotho:  0,        // containment level
+  lakhesis:0,        // modulation level
+  atropos: 0,        // emergence level
+  ogdoad:  0,        // current OGDOAD state 0-7
+  archiveCount: 0,
+  paused:  false,
+  speed:   1.0,
+  dt:      0,
+  lastTs:  null,
+  flash:   0,        // holonomy flash intensity
+  traces:  [],       // MNEMOSYNE trace points
+};
+
+const WALK_LABELS = ['A→B','B→C','C→A'];
+const WALK_NAMES  = ['A (Stayer)','B (Traveler)','C (Escaper)'];
+
+/* ── Canvas ────────────────────────────────────────── */
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+let W, H, CX, CY;
+
+function resize() {
+  W = canvas.width  = canvas.clientWidth  * devicePixelRatio;
+  H = canvas.height = canvas.clientHeight * devicePixelRatio;
+  CX = W/2; CY = H/2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ── Drawing helpers ───────────────────────────────── */
+function rgba(r,g,b,a){ return `rgba(${r},${g},${b},${a})`; }
+
+const COL = {
+  klotho:   [196,163,90],
+  lakhesis: [143,199,255],
+  atropos:  [232,145,90],
+  ananke:   [208,216,232],
+  ogdoad:   [46,58,72],
+  bg:       '#07090e',
+};
+
+function drawGlow(x, y, r, col, alpha=0.4, blur=30) {
+  ctx.save();
+  ctx.shadowBlur  = blur;
+  ctx.shadowColor = `rgba(${col[0]},${col[1]},${col[2]},1)`;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle   = `rgba(${col[0]},${col[1]},${col[2]},${alpha})`;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, TWO_PI); ctx.fill();
+  ctx.restore();
+}
+
+function drawCircleLabel(x, y, text, col, size=11) {
+  ctx.save();
+  ctx.font         = `700 ${size}px "JetBrains Mono"`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = `rgba(${col[0]},${col[1]},${col[2]},0.75)`;
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+/* ── OGDOAD ring ────────────────────────────────────── */
+function getOgdoadPos(i, scale=1) {
+  const a = (i/8)*TWO_PI - Math.PI/2;
+  const r = Math.min(CX, CY) * 0.76 * scale;
+  return { x: CX + Math.cos(a)*r, y: CY + Math.sin(a)*r };
+}
+
+function drawOgdoad() {
+  const r = Math.min(CX, CY) * 0.76;
+
+  // Ring
+  ctx.save();
+  ctx.strokeStyle = rgba(46,58,72,0.5);
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([4,8]);
+  ctx.beginPath(); ctx.arc(CX, CY, r, 0, TWO_PI); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  for (let i=0; i<8; i++) {
+    const p = getOgdoadPos(i);
+    const active = (i === S.ogdoad);
+    const col = active ? COL.ananke : COL.ogdoad;
+    const nodeR = active ? 12 : 7;
+
+    if (active) {
+      drawGlow(p.x, p.y, nodeR*2, COL.ananke, 0.2, 20);
+    }
+
+    ctx.save();
+    ctx.fillStyle   = rgba(col[0],col[1],col[2], active ? 0.9 : 0.35);
+    ctx.shadowBlur  = active ? 14 : 0;
+    ctx.shadowColor = rgba(col[0],col[1],col[2],1);
+    ctx.beginPath(); ctx.arc(p.x, p.y, nodeR, 0, TWO_PI); ctx.fill();
+    ctx.restore();
+
+    // Label
+    const la = (i/8)*TWO_PI - Math.PI/2;
+    const lr = r + 22;
+    const lx = CX + Math.cos(la)*lr;
+    const ly = CY + Math.sin(la)*lr;
+    ctx.save();
+    ctx.font         = `${active?'700':'400'} 9px "JetBrains Mono"`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = rgba(col[0],col[1],col[2], active ? 0.9 : 0.3);
+    ctx.fillText(OGDOAD[i].name, lx, ly);
+    ctx.restore();
+  }
+}
+
+/* ── Fate nodes ─────────────────────────────────────── */
+function getFatePos(angleFn, radius, scale=1) {
+  const a = angleFn(S.t);
+  const r = radius * Math.min(CX,CY) * scale;
+  return { x: CX + Math.cos(a)*r, y: CY + Math.sin(a)*r, a };
+}
+
+function drawFate(pos, col, r, label, val) {
+  // Trail
+  ctx.save();
+  ctx.strokeStyle = rgba(col[0],col[1],col[2], 0.08);
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.arc(CX, CY, Math.hypot(pos.x-CX, pos.y-CY), 0, TWO_PI);
+  ctx.stroke();
+  ctx.restore();
+
+  // Glow + node
+  drawGlow(pos.x, pos.y, r*2.5, col, val*0.35, 22);
+  ctx.save();
+  ctx.fillStyle   = rgba(col[0],col[1],col[2], 0.7+val*0.3);
+  ctx.shadowBlur  = 18 + val*12;
+  ctx.shadowColor = rgba(col[0],col[1],col[2],1);
+  ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, TWO_PI); ctx.fill();
+  ctx.restore();
+
+  drawCircleLabel(pos.x, pos.y - r - 14, label, col, 9);
+}
+
+/* ── ANANKE center ──────────────────────────────────── */
+function drawAnanke() {
+  const pulse = 1 + Math.sin(S.t * 2.5) * 0.08;
+  const cr    = 22 * pulse;
+
+  // Flash on holonomy closure
+  if (S.flash > 0) {
+    ctx.save();
+    ctx.globalAlpha = S.flash * 0.6;
+    const grd = ctx.createRadialGradient(CX,CY,0,CX,CY,120);
+    grd.addColorStop(0, 'rgba(255,255,240,1)');
+    grd.addColorStop(1, 'rgba(255,255,240,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(CX, CY, 120, 0, TWO_PI); ctx.fill();
+    ctx.restore();
+  }
+
+  for (let i=3; i>=0; i--) {
+    const sz = cr*(1+i*0.9);
+    ctx.save();
+    ctx.globalAlpha  = S.synth*(0.5-i*0.1)*0.3;
+    ctx.shadowBlur   = 30+i*15;
+    ctx.shadowColor  = rgba(COL.ananke[0],COL.ananke[1],COL.ananke[2],0.9);
+    ctx.fillStyle    = rgba(COL.ananke[0],COL.ananke[1],COL.ananke[2], S.synth*0.3);
+    ctx.beginPath(); ctx.arc(CX, CY, sz, 0, TWO_PI); ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.save();
+  const g = ctx.createRadialGradient(CX,CY,0,CX,CY,cr);
+  g.addColorStop(0,'rgba(255,255,255,0.95)');
+  g.addColorStop(0.4,rgba(COL.ananke[0],COL.ananke[1],COL.ananke[2],0.8));
+  g.addColorStop(1,rgba(COL.ananke[0],COL.ananke[1],COL.ananke[2],0.2));
+  ctx.fillStyle = g;
+  ctx.shadowBlur = 20; ctx.shadowColor = rgba(COL.ananke[0],COL.ananke[1],COL.ananke[2],1);
+  ctx.beginPath(); ctx.arc(CX, CY, cr, 0, TWO_PI); ctx.fill();
+  ctx.restore();
+
+  drawCircleLabel(CX, CY+cr+16, 'ANANKE', COL.ananke, 9);
+}
+
+/* ── Spine triangle ─────────────────────────────────── */
+function drawSpine(pK, pL, pA) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  // Sides
+  const sides = [[pK, pL, COL.klotho, COL.lakhesis],
+                 [pL, pA, COL.lakhesis, COL.atropos],
+                 [pA, pK, COL.atropos, COL.klotho]];
+  sides.forEach(([p1,p2,c1,c2]) => {
+    const grd = ctx.createLinearGradient(p1.x,p1.y,p2.x,p2.y);
+    grd.addColorStop(0, rgba(c1[0],c1[1],c1[2],0.3));
+    grd.addColorStop(1, rgba(c2[0],c2[1],c2[2],0.3));
+    ctx.strokeStyle = grd;
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+  });
+
+  // Active walk edge highlight
+  const edges = [[pK,pL,COL.klotho],[pL,pA,COL.lakhesis],[pA,pK,COL.atropos]];
+  const [e1,e2,ec] = edges[S.walkPos];
+  const progress = (S.t * 0.7) % 1;
+  const ex = e1.x + (e2.x-e1.x)*progress;
+  const ey = e1.y + (e2.y-e1.y)*progress;
+  ctx.fillStyle   = rgba(ec[0],ec[1],ec[2],0.9);
+  ctx.shadowBlur  = 12; ctx.shadowColor = rgba(ec[0],ec[1],ec[2],1);
+  ctx.beginPath(); ctx.arc(ex, ey, 5, 0, TWO_PI); ctx.fill();
+
+  ctx.restore();
+}
+
+/* ── Phase wave ─────────────────────────────────────── */
+function drawPhaseWave() {
+  const wW = Math.min(CX, CY)*1.1, wH = 40;
+  const wx = CX - wW/2, wy = H - 60;
+  const points = 200;
+
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = rgba(COL.lakhesis[0],COL.lakhesis[1],COL.lakhesis[2],0.6);
+  ctx.lineWidth   = 1.5;
+  ctx.shadowBlur  = 6;
+  ctx.shadowColor = rgba(COL.lakhesis[0],COL.lakhesis[1],COL.lakhesis[2],0.8);
+  ctx.beginPath();
+  for (let i=0; i<=points; i++) {
+    const x = wx + (i/points)*wW;
+    const ph = (i/points)*TWO_PI*3 + S.phase;
+    const y  = wy + Math.sin(ph)*wH*0.5*S.lakhesis;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Second harmonic (emergence)
+  ctx.strokeStyle = rgba(COL.atropos[0],COL.atropos[1],COL.atropos[2],0.4);
+  ctx.lineWidth   = 1;
+  ctx.shadowColor = rgba(COL.atropos[0],COL.atropos[1],COL.atropos[2],0.8);
+  ctx.beginPath();
+  for (let i=0; i<=points; i++) {
+    const x = wx + (i/points)*wW;
+    const ph = (i/points)*TWO_PI*8 + S.phase*2.667;
+    const y  = wy + Math.sin(ph)*wH*0.3*S.atropos;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Wave label
+  ctx.font      = '9px "JetBrains Mono"';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = rgba(COL.lakhesis[0],COL.lakhesis[1],COL.lakhesis[2],0.4);
+  ctx.shadowBlur= 0;
+  ctx.fillText('LAKHESIS phase · ATROPOS harmonic', wx, wy - 12);
+  ctx.restore();
+}
+
+/* ── MNEMOSYNE traces ───────────────────────────────── */
+function drawTraces() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i=1; i<S.traces.length; i++) {
+    const t0 = S.traces[i-1], t1 = S.traces[i];
+    const age = 1 - (S.traces.length-1-i)/Math.max(1,S.traces.length-1);
+    ctx.strokeStyle = rgba(90,196,170,age*0.12);
+    ctx.lineWidth   = 1;
+    ctx.beginPath(); ctx.moveTo(t0.x,t0.y); ctx.lineTo(t1.x,t1.y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ── Stars (subtle) ─────────────────────────────────── */
+const STARS = Array.from({length:80}, ()=>({
+  x:Math.random(), y:Math.random(),
+  r:Math.random()*0.9+0.2, a:Math.random()*0.3+0.03
+}));
+function drawStars() {
+  STARS.forEach(s=>{
+    ctx.save(); ctx.globalAlpha=s.a;
+    ctx.fillStyle='#7a8090';
+    ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r,0,TWO_PI); ctx.fill();
+    ctx.restore();
+  });
+}
+
+/* ── Main render ────────────────────────────────────── */
+function render() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0,0,W,H);
+  drawStars();
+  drawTraces();
+
+  // Fate positions
+  const sc = Math.min(CX,CY);
+  const kAng = t => t * 0.25;          // slow
+  const lAng = t => t * 0.62 + TWO_PI/3;   // medium, offset
+  const aAng = t => t * 1.6 + TWO_PI*2/3;  // fast
+
+  const pK = { x: CX + Math.cos(kAng(S.t)) * sc*0.42,
+               y: CY + Math.sin(kAng(S.t)) * sc*0.42 };
+  const pL = { x: CX + Math.cos(lAng(S.t)) * sc*0.55,
+               y: CY + Math.sin(lAng(S.t)) * sc*0.55 };
+  const pA = { x: CX + Math.cos(aAng(S.t)) * sc*0.28,
+               y: CY + Math.sin(aAng(S.t)) * sc*0.28 };
+
+  drawOgdoad();
+  drawSpine(pK, pL, pA);
+  drawAnanke();
+  drawFate(pK, COL.klotho,  14, 'KLOTHO',  S.klotho);
+  drawFate(pL, COL.lakhesis,11, 'LAKHESIS',S.lakhesis);
+  drawFate(pA, COL.atropos,  9, 'ATROPOS', S.atropos);
+  drawPhaseWave();
+
+  // Step trace to MNEMOSYNE
+  if (S.synth > 0.6 && Math.random() < 0.04) {
+    S.traces.push({ x:pA.x, y:pA.y });
+    if (S.traces.length > 120) S.traces.shift();
+  }
+}
+
+/* ── Update state ───────────────────────────────────── */
+function update(dt) {
+  S.t += dt * S.speed;
+
+  // Derived values
+  S.klotho   = 0.5 + 0.5*Math.cos(S.t * 0.25);
+  S.lakhesis = 0.5 + 0.5*Math.sin(S.t * 0.62 + 0.7);
+  S.atropos  = 0.5 + 0.5*Math.sin(S.t * 1.6 + 1.4);
+
+  S.phase   = (S.phase + dt * S.speed * 0.4) % (TWO_PI);
+  S.tension = Math.abs(S.klotho - S.atropos);
+  S.synth   = S.klotho * S.lakhesis * S.atropos;
+
+  // 3:8 resonance → OGDOAD state
+  const ogdoadRaw = Math.floor(S.t * 0.25 / (TWO_PI/8)) % 8;
+  S.ogdoad = ((ogdoadRaw % 8) + 8) % 8;
+
+  // Walk position A→B→C→A
+  S.walkPos = Math.floor((S.t * 0.18) % 3);
+
+  // Holonomy step (0-23, cycles every ~96s at speed 1)
+  const holonPeriod = TWO_PI * 4; // one full holonomy cycle
+  const holonRaw    = (S.t % holonPeriod) / holonPeriod;
+  const newStep     = Math.floor(holonRaw * 24);
+  if (newStep !== S.step) {
+    const wasStep = S.step;
+    S.step = newStep;
+    // Check holonomy closure
+    if (wasStep === 23 && newStep === 0) {
+      S.flash = 1.0;
+      addArchive(`HOLONOMY CLOSED · ${OGDOAD[S.ogdoad].name} · synthesis ${S.synth.toFixed(3)}`);
+    }
+    // Dialogue every few steps
+    if (S.step % 3 === 0) emitDialogue();
+  }
+
+  // Flash decay
+  S.flash = Math.max(0, S.flash - dt * 2.5);
+}
+
+/* ── Dialogue system ────────────────────────────────── */
+const dlg = document.getElementById('dialogueFeed');
+const arc = document.getElementById('archiveFeed');
+
+function pick(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+
+function fillPhrase(tmpl) {
+  return tmpl
+    .replace('{state}',  OGDOAD[S.ogdoad].name)
+    .replace('{phase}',  (S.phase*180/Math.PI).toFixed(0))
+    .replace('{tension}',S.tension.toFixed(3))
+    .replace('{emer}',   (S.atropos*100).toFixed(0)+'%')
+    .replace('{synth}',  S.synth.toFixed(3))
+    .replace('{step}',   S.step)
+    .replace('{val}',    S.klotho.toFixed(3))
+    .replace('{walk}',   WALK_LABELS[S.walkPos]);
+}
+
+function addDialogue(who, col, text) {
+  const el = document.createElement('div');
+  el.className = 'd-entry';
+  el.innerHTML = `<div class="d-who" style="color:${col}">${who}</div>
+    <div class="d-text">${text}</div>`;
+  dlg.insertBefore(el, dlg.firstChild);
+  while (dlg.children.length > 24) dlg.removeChild(dlg.lastChild);
+}
+
+function emitDialogue() {
+  const r = Math.random();
+  if (r < 0.34) addDialogue('KLOTHO · Anchor',  '#c4a35a', fillPhrase(pick(KLOTHO_PHRASES)));
+  else if (r < 0.67) addDialogue('LAKHESIS · Witness','#8fc7ff', fillPhrase(pick(LAKHESIS_PHRASES)));
+  else addDialogue('ATROPOS · Emergence','#e8915a', fillPhrase(pick(ATROPOS_PHRASES)));
+}
+
+function addArchive(text) {
+  S.archiveCount++;
+  const el = document.createElement('div');
+  el.className = 'a-entry';
+  el.innerHTML = `<span class="a-step">STEP ${String(S.step).padStart(2,'0')}</span>${text}`;
+  arc.insertBefore(el, arc.firstChild);
+  while (arc.children.length > 40) arc.removeChild(arc.lastChild);
+  document.getElementById('archiveCount').textContent = S.archiveCount;
+}
+
+/* ── HUD update ─────────────────────────────────────── */
+function updateHUD() {
+  // Holonomy arc
+  const holonFrac = S.step / 24;
+  const circumf   = Math.PI * 2 * 34;
+  document.getElementById('holonArc').setAttribute('stroke-dashoffset',
+    circumf * (1 - holonFrac));
+  document.getElementById('holonStep').textContent = S.step;
+
+  document.getElementById('anankeVal').textContent  = S.synth.toFixed(3);
+  document.getElementById('anankeBar').style.width  = (S.synth*100).toFixed(1)+'%';
+
+  document.getElementById('klothoVal').textContent  = S.klotho.toFixed(3);
+  document.getElementById('klothoBar').style.width  = (S.klotho*100).toFixed(1)+'%';
+  document.getElementById('ogdoadName').textContent  = OGDOAD[S.ogdoad].name;
+  document.getElementById('ogdoadIdx').textContent   = S.ogdoad;
+  document.getElementById('spinePos').textContent    = WALK_LABELS[S.walkPos];
+
+  document.getElementById('phaseVal').textContent   = (S.phase*180/Math.PI).toFixed(1)+'°';
+  document.getElementById('lakhesisBar').style.width= (S.lakhesis*100).toFixed(1)+'%';
+  document.getElementById('tensionVal').textContent  = S.tension.toFixed(3);
+  document.getElementById('walkVal').textContent     = WALK_LABELS[S.walkPos];
+  document.getElementById('phaseRatio').textContent  = (S.phase*180/Math.PI).toFixed(0)+'°';
+
+  const res3_8 = (S.step % 3 === 0) ? '3:8 HIT' : '—';
+  document.getElementById('resonanceVal').textContent = res3_8;
+  document.getElementById('resonanceVal').style.color  = res3_8 !== '—' ? '#c4a35a' : '#3e4a5a';
+
+  document.getElementById('atroposVal').textContent   = S.atropos.toFixed(3);
+  document.getElementById('atroposBar').style.width   = (S.atropos*100).toFixed(1)+'%';
+}
+
+/* ── Main loop ──────────────────────────────────────── */
+let lastTs = null;
+function loop(ts) {
+  requestAnimationFrame(loop);
+  if (lastTs === null) { lastTs = ts; return; }
+  const dt = Math.min((ts - lastTs)/1000, 0.05);
+  lastTs = ts;
+
+  if (!S.paused) update(dt);
+  render();
+  updateHUD();
+}
+
+/* ── Controls ───────────────────────────────────────── */
+document.getElementById('btnPause').addEventListener('click', function() {
+  S.paused = !S.paused;
+  this.textContent = S.paused ? 'RESUME' : 'PAUSE';
+  this.classList.toggle('active', !S.paused);
+});
+document.getElementById('btnStep').addEventListener('click', () => {
+  S.paused = true;
+  update(0.25);
+  document.getElementById('btnPause').textContent = 'RESUME';
+  document.getElementById('btnPause').classList.remove('active');
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  S.t=0; S.step=0; S.phase=0; S.synth=0; S.flash=0;
+  S.archiveCount=0; S.traces=[];
+  document.getElementById('dialogueFeed').innerHTML='';
+  document.getElementById('archiveFeed').innerHTML='';
+  document.getElementById('archiveCount').textContent='0';
+  emitDialogue();
+});
+document.getElementById('btnSlow').addEventListener('click', function() {
+  S.speed=0.25;
+  document.querySelectorAll('.ctrl:last-child button').forEach(b=>b.classList.remove('active'));
+  this.classList.add('active');
+});
+document.getElementById('btnNorm').addEventListener('click', function() {
+  S.speed=1.0;
+  document.querySelectorAll('.ctrl:last-child button').forEach(b=>b.classList.remove('active'));
+  this.classList.add('active');
+});
+document.getElementById('btnFast').addEventListener('click', function() {
+  S.speed=4.0;
+  document.querySelectorAll('.ctrl:last-child button').forEach(b=>b.classList.remove('active'));
+  this.classList.add('active');
+});
+
+/* ── Init ───────────────────────────────────────────── */
+emitDialogue(); emitDialogue(); emitDialogue();
+addArchive('MNEMOSYNE initialised · MOIRAI system online');
+addArchive(`ANANKE · 24-step holonomy ready`);
+document.getElementById('btnNorm').classList.add('active');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

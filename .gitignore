@@ -1,0 +1,6 @@
+.DS_Store
+Thumbs.db
+*.swp
+node_modules/
+MNEMOSYNE/*.jsonl
+SYMPOSION/*.jsonl
